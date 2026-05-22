@@ -38,30 +38,39 @@ export async function POST(req: NextRequest) {
     }
 
     // 🤖 Hidden prompt is used here (user NEVER sees it)
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: [
         {
           role: "user",
           content: [
-            { type: "input_text", text: INTERNAL_PROMPT },
             {
-              type: "input_image",
-              image_url: image_url,
+              type: "text",
+              text: INTERNAL_PROMPT,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: image_url,
+              },
             },
           ],
         },
       ],
     });
 
+    const content = response.choices[0].message.content;
+    const result = JSON.parse(content as string);
+
     return NextResponse.json({
       status: "success",
-      result: response.output[0].content[0],
+      result: result,
     });
 
   } catch (error: any) {
+    console.error("Verification error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error.message },
       { status: 500 }
     );
   }

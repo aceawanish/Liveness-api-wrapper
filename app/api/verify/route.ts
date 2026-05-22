@@ -1,52 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import OpenAI from "openai";
+import { NextRequest, NextResponse } from "next/server";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { imageUrl } = body;
+// 🔒 PRIVATE PROMPT (NOT EXPOSED TO USERS)
+const INTERNAL_PROMPT = `
+You are an image verification system.
 
-    if (!imageUrl) {
+Analyze the given image and return STRICT JSON:
+
+{
+  "face_detected": boolean,
+  "tampered": boolean,
+  "confidence": number
+}
+
+Do not return anything except JSON.
+`;
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { token, image_url } = body;
+
+    // ✅ Token check
+    if (token !== process.env.API_SECRET_TOKEN) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!image_url) {
       return NextResponse.json(
-        { error: 'imageUrl is required' },
+        { error: "image_url required" },
         { status: 400 }
       );
     }
 
-    // Call OpenAI Vision API for liveness verification
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
-      messages: [
+    // 🤖 Hidden prompt is used here (user NEVER sees it)
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [
         {
-          role: 'user',
+          role: "user",
           content: [
+            { type: "input_text", text: INTERNAL_PROMPT },
             {
-              type: 'image_url',
-              image_url: {
-                url: imageUrl,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Analyze this image and determine if this appears to be a real person (liveness check). Respond with JSON: { "isLive": boolean, "confidence": number (0-1), "reason": string }',
+              type: "input_image",
+              image_url: image_url,
             },
           ],
         },
       ],
     });
 
-    const content = response.choices[0].message.content;
-    const result = JSON.parse(content as string);
+    return NextResponse.json({
+      status: "success",
+      result: response.output[0].content[0],
+    });
 
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Verification error:', error);
+  } catch (error: any) {
     return NextResponse.json(
-      { error: 'Verification failed' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

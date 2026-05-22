@@ -2,8 +2,13 @@
   "name": "api-wrapper",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "vercel-build": "next build"
+  },
   "dependencies": {
     "next": "latest",
-    "openai": "latest"
+    "openai": "^4.0.0"
   }
 }

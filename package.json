@@ -4,6 +4,6 @@
   "private": true,
   "dependencies": {
     "next": "latest",
-    "openai": "^4.0.0"
+    "openai": "latest"
   }
 }

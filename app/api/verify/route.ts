@@ -1,10 +1,6 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
-
 // 🔒 PRIVATE PROMPT (NOT EXPOSED TO USERS)
 const INTERNAL_PROMPT = `
 You are an image verification system.
@@ -22,6 +18,11 @@ Do not return anything except JSON.
 
 export async function POST(req: NextRequest) {
   try {
+    // ✅ Initialize OpenAI INSIDE the function (runtime, not build time)
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const body = await req.json();
     const { token, image_url } = body;
 
